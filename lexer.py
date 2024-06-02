@@ -124,6 +124,7 @@ class Lexer:
             # check if token is in list of keywords
             tokText = self.source[startPos : self.curPos + 1]
             keyword = Token.checkIfKeyword(tokText)
+    
 
             if keyword == None:    # Identifier
                 token = Token(tokText, TokenType.IDENT)
