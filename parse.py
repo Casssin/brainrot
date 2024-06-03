@@ -24,6 +24,7 @@ class Parser:
     def match(self, kind: TokenType) -> None:
         if not self.checkToken(kind):
             self.abort("Expected " + kind.name + ", got " + self.curToken.kind.name)
+        self.nextToken()
 
     # Advances the current token.
     def nextToken(self) -> None:
@@ -105,6 +106,7 @@ class Parser:
             self.nextToken()
             self.match(TokenType.IDENT)
             self.match(TokenType.EQ)
+
             self.expression()
 
         # "INPUT" ident
@@ -123,15 +125,64 @@ class Parser:
     
     # nl ::= '\n' +
     def nl(self) -> None:
-        self.nextToken()
         self.match(TokenType.NEWLINE)
         print("NEWLINE")
 
         while self.checkToken(TokenType.NEWLINE):
             self.nextToken()
 
+    # expression ::= term {( "-" | "+" ) term}
     def expression(self) -> None:
-        pass
+        print("EXPRESSION")
+
+        self.term()
+        # Can have 0 o r more +/- epxressions
+        while self.checkToken(TokenType.PLUS) or self.checkToken(TokenType.MINUS):
+            self.nextToken()
+            self.term()
+    
+    # term ::= unary {( "/" | "*" ) unary}
+    def term(self) -> None:
+        print("TERM")
+
+        self.unary()
+        # Can have 0 or more *// expressions
+        while self.checkToken(TokenType.ASTERISK) or self.checkToken(TokenType.SLASH):
+            self.nextToken()
+            self.unary()
+    
+    def unary(self) -> None:
+        print("UNARY")
+
+        # Optional unary +/-
+        if self.checkToken(TokenType.PLUS) or self.checkToken(TokenType.MINUS):
+            self.nextToken()
+        self.primary()
+    
+    def primary(self) -> None:
+        print("Primary (" + self.curToken.text + ")")
+
+        if self.checkToken(TokenType.NUMBER):
+            self.nextToken()
+        elif self.checkToken(TokenType.IDENT):
+            self.nextToken()
+        else:
+            self.abort("Unexpected token at " + self.curToken.text)
 
     def comparison(self) -> None:
-        pass
+        print("COMPARISON")
+        self.expression()
+
+        # Must have one comparison operator and another expression
+        if self.isComparisonOperator():
+            self.nextToken()
+            self.expression()
+        else:
+            self.abort("Expected comparison operator at: " + self.curToken.text)
+        
+        while self.isComparisonOperator():
+            self.nextToken()
+            self.expression()
+    
+    def isComparisonOperator(self) -> bool:
+        return self.checkToken(TokenType.GT) or self.checkToken(TokenType.GTEQ) or self.checkToken(TokenType.LT) or self.checkToken(TokenType.LTEQ) or self.checkToken(TokenType.EQEQ) or self.checkToken(TokenType.NOTEQ)
