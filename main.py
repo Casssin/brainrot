@@ -1,6 +1,7 @@
 from lexer import *
 from parse import *
 from tok import *
+from emitter import *
 
 def main():
     print("Brainrot Compiler")
@@ -12,9 +13,11 @@ def main():
 
     # Initialize the lexer and parser.
     lexer = Lexer(source)
-    parser = Parser(lexer)
+    emitter = Emitter("compiled/out.c")
+    parser = Parser(lexer, emitter)
 
     parser.program() # Start the parser.
+    emitter.writeFile() # writes the file
     print("Parsing completed.")
 
 main()

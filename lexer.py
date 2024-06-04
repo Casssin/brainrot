@@ -99,11 +99,13 @@ class Lexer:
 
         elif self.curChar.isdigit():
             # Leading character is a digit, so this must be number
+            isFloat = False
             startPos = self.curPos
             while self.peek().isdigit():
                 self.nextChar()
             
             if self.peek() == '.':   # Decimal
+                isFloat = True
                 self.nextChar()
 
                 if not self.peek().isdigit():
@@ -113,7 +115,10 @@ class Lexer:
                     self.nextChar()
             
             tokText = self.source[startPos:self.curPos + 1]
-            token = Token(tokText, TokenType.NUMBER)
+            if isFloat:
+                token = Token(tokText, TokenType.FLOAT)
+            else:
+                token = Token(tokText, TokenType.NUMBER)
 
         elif self.curChar.isalpha():
             # Leading character is a letter, so must be an identifier or keyword
@@ -141,7 +146,7 @@ class Lexer:
 
                 self.nextChar()
             self.nextChar()
-            tokText = self.source[startPos : self.curPos]   # Get substring
+            tokText = self.source[startPos : self.curPos + 1]   # Get substring
             token = Token(tokText, TokenType.STRING)
 
         else:

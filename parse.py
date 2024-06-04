@@ -1,11 +1,15 @@
 import sys
 from lexer import *
 from tok import *
+from emitter import *
 
 # Parser object keeps track of current token and checks if the code matches the grammar.
 class Parser:
-    def __init__(self, lexer: Lexer):
+    def __init__(self, lexer: Lexer, emitter: Emitter):
         self.lexer = lexer
+        self.emitter = emitter
+
+        self.symbols = set() # All variables decalred so far
 
         self.curToken = None
         self.peekToken = None
@@ -38,7 +42,8 @@ class Parser:
 
     # program ::= {statement}
     def program(self) -> None:
-        print("PROGRAM")
+        self.emitter.headerLine("#include <stdio.h>")
+        self.emitter.headerLine("int main(void) {")
 
         while self.checkToken(TokenType.NEWLINE):
             self.nextToken()
@@ -47,73 +52,115 @@ class Parser:
         while not self.checkToken(TokenType.EOF):
             self.statement()
         
+        self.emitter.enderLine("return 0;")
+        self.emitter.enderLine("}")
+        
     
     def statement(self) -> None:
+        # "RIZZ" (print) (expression | string)
+        if self.checkToken(TokenType.RIZZ):
+            self.nextToken()
 
-        # "umm actually" (print) (expression | string)
-        if self.checkToken(TokenType.umm) and self.checkPeek(TokenType.actually):
-            print("STATEMENT-umm-actually")
-            self.nextToken()
-            self.nextToken()
             if self.checkToken(TokenType.STRING):
+                # Simple string, so print it.
+                self.emitter.emitLine("printf(" + self.curToken.text + "\\n\");")
                 self.nextToken()
             else:
+                self.emitter.emit("printf(\"%" + ".2f\\n\", (float)(")
                 self.expression()
+                self.emitter.emitLine("));")
         
-        # "IF" comparison "THEN" nl {statement} "ENDIF" nl
-        elif self.checkToken(TokenType.IF):
-            print("STATEMENT-IF")
+        # "IS" comparison "CHAT" nl {statement} "THANKS CHAT" nl
+        elif self.checkToken(TokenType.IS):
+            self.emitter.emit("if (")
             self.nextToken()
             self.comparison()
+            self.emitter.emit(")")
+            self.match(TokenType.CHAT)
+            self.emitter.emitLine("{")
 
-            self.match(TokenType.THEN)
             self.nl()
 
-            while not self.checkToken(TokenType.ENDIF):
+            while not self.checkToken(TokenType.THANKS):
                 self.statement()
             
-            self.match(TokenType.ENDIF)
+            self.match(TokenType.THANKS)
+            self.match(TokenType.CHAT)
+            self.emitter.emitLine("}")
         
-        # "WHILE" comparison "REPEAT" nl {satement nl} "ENDWHILE" nl
-        elif self.checkToken(TokenType.WHILE):
-            print("STATEMENT-WHILE")
+        # "ONLY IN OHIO" comparison nl {statement nl} "SUS" nl
+        elif self.checkToken(TokenType.ONLY):
             self.nextToken()
+            self.match(TokenType.IN)
+            self.match(TokenType.OHIO)
+            self.emitter.emit("while (")
             self.comparison()
-
-            self.match(TokenType.REPEAT)
+            self.emitter.emitLine(") {")
             self.nl()
 
-            while not self.checkToken(TokenType.ENDWHILE):
+            while not self.checkToken(TokenType.SUS):
                 self.statement()
         
-            self.match(TokenType.ENDWHILE)
+            self.match(TokenType.SUS)
+            self.emitter.emitLine("}")
         
-                # "LABEL" ident
-        elif self.checkToken(TokenType.LABEL):
-            print("STATEMENT-LABEL")
-            self.nextToken()
-            self.match(TokenType.IDENT)
 
-        # "GOTO" ident
-        elif self.checkToken(TokenType.GOTO):
-            print("STATEMENT-GOTO")
+        # "ALLOW IT" ident "=" expression
+        elif self.checkToken(TokenType.ALLOW):
             self.nextToken()
-            self.match(TokenType.IDENT)
-
-        # "LET" ident "=" expression
-        elif self.checkToken(TokenType.LET):
-            print("STATEMENT-LET")
-            self.nextToken()
+            self.match(TokenType.IT)
+            varName = self.curToken.text
             self.match(TokenType.IDENT)
             self.match(TokenType.EQ)
 
-            self.expression()
 
-        # "INPUT" ident
-        elif self.checkToken(TokenType.INPUT):
-            print("STATEMENT-INPUT")
+            # Find and determine what type the variable is and intialize the variable if not initalized
+            if self.checkToken(TokenType.NUMBER):
+                self.intializeVariable("int", varName)
+                self.emitter.emit(varName + " = ")
+                self.expression()
+            
+            elif self.checkToken(TokenType.FLOAT):
+                self.intializeVariable("float", varName)
+                self.emitter.emit(varName + " = ")
+                self.expression()
+
+            # Strings have a character limit of 256
+            elif self.checkToken(TokenType.STRING):
+                self.intializeVariable("string", varName)
+                self.emitter.emit("strcpy(" + varName + ", " + self.curToken.text + ")")
+                self.emitter.enderLine("free(" + varName +");")
+                self.nextToken()
+           
+            else:
+                self.abort("Could not recognize variable type")
+
+            self.emitter.emitLine(";")
+
+        # "SKIBIDI" ident
+        elif self.checkToken(TokenType.SKIBIDI):
             self.nextToken()
+
+            # If variable doesn't already exist, declare it.
+            if self.curToken.text not in self.symbols:
+                self.symbols.add(self.curToken.text)
+                self.emitter.headerLine("float " + self.curToken.text + ";")
+
+            # Emit scanf but also validate the input. If invalid, set the variable to 0 and clear the input.
+            self.emitter.emitLine("if(0 == scanf(\"%" + "f\", &" + self.curToken.text + ")) {")
+            self.emitter.emitLine(self.curToken.text + " = 0;")
+            self.emitter.emit("scanf(\"%")
+            self.emitter.emitLine("*s\");")
+            self.emitter.emitLine("}")
             self.match(TokenType.IDENT)
+        
+        elif self.checkToken(TokenType.IDENT):
+            self.emitter.emit(self.curToken.text)
+            self.nextToken()
+            self.match(TokenType.EQ)
+            self.emitter.emit(" = ")
+            self.expression()
+            self.emitter.emitLine(";")
 
         # This is not a valid statement. Error!
         else:
@@ -138,6 +185,7 @@ class Parser:
         self.term()
         # Can have 0 o r more +/- epxressions
         while self.checkToken(TokenType.PLUS) or self.checkToken(TokenType.MINUS):
+            self.emitter.emit(self.curToken.text)
             self.nextToken()
             self.term()
     
@@ -148,6 +196,7 @@ class Parser:
         self.unary()
         # Can have 0 or more *// expressions
         while self.checkToken(TokenType.ASTERISK) or self.checkToken(TokenType.SLASH):
+            self.emitter.emit(self.curToken.text)
             self.nextToken()
             self.unary()
     
@@ -156,17 +205,24 @@ class Parser:
 
         # Optional unary +/-
         if self.checkToken(TokenType.PLUS) or self.checkToken(TokenType.MINUS):
+            self.emitter.emit(self.curToken.text)
             self.nextToken()
         self.primary()
     
+    # primary ::= number | ident
     def primary(self) -> None:
-        print("Primary (" + self.curToken.text + ")")
-
-        if self.checkToken(TokenType.NUMBER):
+        if self.checkToken(TokenType.NUMBER) or self.checkToken(TokenType.FLOAT): 
+            self.emitter.emit(self.curToken.text)
             self.nextToken()
         elif self.checkToken(TokenType.IDENT):
+            # Ensure the variable already exists.
+            if self.curToken.text not in self.symbols:
+                self.abort("Referencing variable before assignment: " + self.curToken.text)
+
+            self.emitter.emit(self.curToken.text)
             self.nextToken()
         else:
+            # Error!
             self.abort("Unexpected token at " + self.curToken.text)
 
     def comparison(self) -> None:
@@ -175,10 +231,15 @@ class Parser:
 
         # Must have one comparison operator and another expression
         if self.isComparisonOperator():
+            self.emitter.emit(self.curToken.text)
             self.nextToken()
             self.expression()
-        else:
-            self.abort("Expected comparison operator at: " + self.curToken.text)
+
+        # Can have 0 or more comparison operator and expressions.
+        while self.isComparisonOperator():
+            self.emitter.emit(self.curToken.text)
+            self.nextToken()
+            self.expression()
         
         while self.isComparisonOperator():
             self.nextToken()
@@ -186,3 +247,12 @@ class Parser:
     
     def isComparisonOperator(self) -> bool:
         return self.checkToken(TokenType.GT) or self.checkToken(TokenType.GTEQ) or self.checkToken(TokenType.LT) or self.checkToken(TokenType.LTEQ) or self.checkToken(TokenType.EQEQ) or self.checkToken(TokenType.NOTEQ)
+    
+    def intializeVariable(self, varType: str, varName: str) -> None:
+        # check if ident exists in symbol table. if not declare it
+        if self.curToken.text not in self.symbols:
+            self.symbols.add(self.curToken.text)
+            if varType == "string":
+                self.emitter.headerLine("char *" + varName + " = malloc(256);")
+            else:
+                self.emitter.headerLine(varType + " " + varName + ";")
