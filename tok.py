@@ -60,7 +60,7 @@ class Token:
         self.text = tokenText  # The token's actual text
         self.kind = tokenKind  # The tokentype that this token is classified as
     
-    def checkIfKeyword(tokenText: str) -> Optional[bool]:
+    def checkIfKeyword(tokenText: str) -> Optional[TokenType]:
         for kind in TokenType:
             # Relies on all keyword enum values being 1XX
             if kind.name == tokenText and kind.value >= 100 and kind.value < 200:
