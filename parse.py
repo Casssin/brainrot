@@ -12,6 +12,7 @@ class Parser:
         self.identInt = set()   # All int variables seen so far
         self.identFloat = set() # All float variables seen so far
         self.identStr = set()   # All string variables seen so far
+        self.identBool = set()  # All boolean variables seen so far
 
         self.curToken = None
         self.peekToken = None
@@ -45,6 +46,7 @@ class Parser:
     # program ::= {statement}
     def program(self) -> None:
         self.emitter.headerLine("#include <stdio.h>")
+        self.emitter.headerLine("#include <stdbool.h>")
         self.emitter.headerLine("int main(void) {")
 
         while self.checkToken(TokenType.NEWLINE):
@@ -92,7 +94,7 @@ class Parser:
         elif self.checkToken(TokenType.IDENT):
             self.emitter.emit(self.curToken.text)
             self.nextToken()
-            self.match(TokenType.EQ)
+            self.match(TokenType.IS)
             self.emitter.emit(" = ")
             self.expression()
             self.emitter.emitLine(";")
@@ -115,7 +117,7 @@ class Parser:
             self.match(TokenType.CHAT)
             self.emitter.emitLine("}")
         
-        # "ONLY IN OHIO" comparison nl {statement nl} "SUS" nl
+        # "ONLY IN OHIO" comparison nl {statement nl} "SUSSY" nl
         elif self.checkToken(TokenType.ONLY):
             self.nextToken()
             self.match(TokenType.IN)
@@ -125,20 +127,20 @@ class Parser:
             self.emitter.emitLine(") {")
             self.nl()
 
-            while not self.checkToken(TokenType.SUS):
+            while not self.checkToken(TokenType.SUSSY):
                 self.statement()
         
-            self.match(TokenType.SUS)
+            self.match(TokenType.SUSSY)
             self.emitter.emitLine("}")
         
 
-        # "ALLOW IT" ident "=" expression
-        elif self.checkToken(TokenType.ALLOW):
+        # "ON GOD" ident "IS" expression
+        elif self.checkToken(TokenType.ON):
             self.nextToken()
-            self.match(TokenType.IT)
+            self.match(TokenType.GOD)
             varName = self.curToken.text
             self.match(TokenType.IDENT)
-            self.match(TokenType.EQ)
+            self.match(TokenType.IS)
 
 
             # Find and determine what type the variable is and intialize the variable if not initalized
@@ -159,6 +161,11 @@ class Parser:
                 self.emitter.enderLine("free(" + varName +");")
                 self.nextToken()
 
+            elif self.checkToken(TokenType.BASED) or self.checkToken(TokenType.CRINGE):
+                self.intializeVariable("bool", varName)
+                self.emitter.emit(varName + "=")
+                self.expression()
+
             elif self.checkToken(TokenType.IDENT):
                 if self.curToken.text in self.identFloat:
                     self.intializeVariable("float", varName)
@@ -166,7 +173,7 @@ class Parser:
                     self.intializeVariable("int", varName)
                 self.emitter.emit(varName + " = ")
                 self.expression()
-           
+                       
             else:
                 self.abort("Could not recognize variable type")
 
@@ -269,6 +276,15 @@ class Parser:
 
             self.emitter.emit(self.curToken.text)
             self.nextToken()
+
+        elif self.checkToken(TokenType.BASED):
+            self.emitter.emit("true")
+            self.nextToken()
+        
+        elif self.checkToken(TokenType.CRINGE):
+            self.emitter.emit("false")
+            self.nextToken()
+
         else:
             # Error!
             self.abort("Unexpected token at " + self.curToken.text)
@@ -298,13 +314,16 @@ class Parser:
     
     def intializeVariable(self, varType: str, varName: str) -> None:
         # check if ident exists in symbol table. if not declare it
-        if self.curToken.text not in self.identFloat or self.curToken.text not in self.identInt or self.curToken.text not in self.identStr:
+        if self.curToken.text not in self.identFloat or self.curToken.text not in self.identInt or self.curToken.text not in self.identStr or self.curToken.text not in self.identBool:
             if varType == "string":
                 self.identStr.add(varName)
                 self.emitter.headerLine("char *" + varName + " = malloc(256);")
+            elif varType == "float":
+                self.identFloat.add(varName)
+                self.emitter.headerLine(varType + " " + varName + ";")
             elif varType == "int":
                 self.identInt.add(varName)
                 self.emitter.headerLine(varType + " " + varName + ";")
             else:
-                self.identFloat.add(varName)
+                self.identBool.add(varName)
                 self.emitter.headerLine(varType + " " + varName + ";")

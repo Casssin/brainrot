@@ -69,7 +69,7 @@ class Lexer:
                 self.nextChar()
                 token = Token(lastChar + self.curChar, TokenType.EQEQ)
             else:
-                token = Token(self.curChar, TokenType.EQ)
+                self.abort("Single = does not exist. Use MOGGED.")
 
         elif self.curChar == '>':
             # Check whether this is token is > or >=

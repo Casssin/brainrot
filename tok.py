@@ -27,14 +27,14 @@ class TokenType(enum.Enum):
 	# cringe = false
 	CRINGE = 113
 	# allow it = LET, aka assigning IDENT
-	ALLOW = 114
-	IT = 115
+	ON = 114
+	GOD = 115
 	# only in ohio = while
 	ONLY = 116
 	IN = 117
 	OHIO = 118
 	# SUS = endwhile
-	SUS = 119
+	SUSSY = 119
     # IS comparison CHAT = IF comparison
 	IS = 120
 	CHAT = 121
@@ -42,7 +42,7 @@ class TokenType(enum.Enum):
 	THANKS = 122
 
 	# Operators.
-	EQ = 201  
+	#EQ = 201  
 	PLUS = 202
 	MINUS = 203
 	ASTERISK = 204
