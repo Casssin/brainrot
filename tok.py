@@ -4,8 +4,8 @@ from typing import Optional
 class TokenType(enum.Enum):
 	EOF = -1
 	NEWLINE = 0
-	NUMBER = 1
-	FLOAT = 2
+	INTEGER = 1
+	FLOAT  = 2
 	STRING = 3
 	IDENT = 4
 	# Keywords.

@@ -9,7 +9,9 @@ class Parser:
         self.lexer = lexer
         self.emitter = emitter
 
-        self.symbols = set() # All variables decalred so far
+        self.identInt = set()   # All int variables seen so far
+        self.identFloat = set() # All float variables seen so far
+        self.identStr = set()   # All string variables seen so far
 
         self.curToken = None
         self.peekToken = None
@@ -63,12 +65,20 @@ class Parser:
 
             if self.checkToken(TokenType.STRING):
                 # Simple string, so print it.
-                self.emitter.emitLine("printf(" + self.curToken.text + "\\n\");")
+                self.emitter.emitLine("printf(" + self.curToken.text[:-1] + "\\n\");")   # [:-1] to remove the quotation mark
                 self.nextToken()
             else:
                 self.emitter.emit("printf(\"%" + ".2f\\n\", (float)(")
                 self.expression()
                 self.emitter.emitLine("));")
+        
+        elif self.checkToken(TokenType.IDENT):
+            self.emitter.emit(self.curToken.text)
+            self.nextToken()
+            self.match(TokenType.EQ)
+            self.emitter.emit(" = ")
+            self.expression()
+            self.emitter.emitLine(";")
         
         # "IS" comparison "CHAT" nl {statement} "THANKS CHAT" nl
         elif self.checkToken(TokenType.IS):
@@ -115,7 +125,7 @@ class Parser:
 
 
             # Find and determine what type the variable is and intialize the variable if not initalized
-            if self.checkToken(TokenType.NUMBER):
+            if self.checkToken(TokenType.INTEGER):
                 self.intializeVariable("int", varName)
                 self.emitter.emit(varName + " = ")
                 self.expression()
@@ -131,6 +141,13 @@ class Parser:
                 self.emitter.emit("strcpy(" + varName + ", " + self.curToken.text + ")")
                 self.emitter.enderLine("free(" + varName +");")
                 self.nextToken()
+
+            elif self.checkToken(TokenType.IDENT):
+                if self.curToken.text in self.identFloat:
+                    self.intializeVariable("float", varName)
+                elif self.curToken.text in self.identInt:
+                    self.intializeVariable("int", varName)
+                self.expression()
            
             else:
                 self.abort("Could not recognize variable type")
@@ -142,8 +159,8 @@ class Parser:
             self.nextToken()
 
             # If variable doesn't already exist, declare it.
-            if self.curToken.text not in self.symbols:
-                self.symbols.add(self.curToken.text)
+            if self.curToken.text not in self.identFloat:
+                self.identFloat.add(self.curToken.text)
                 self.emitter.headerLine("float " + self.curToken.text + ";")
 
             # Emit scanf but also validate the input. If invalid, set the variable to 0 and clear the input.
@@ -153,14 +170,6 @@ class Parser:
             self.emitter.emitLine("*s\");")
             self.emitter.emitLine("}")
             self.match(TokenType.IDENT)
-        
-        elif self.checkToken(TokenType.IDENT):
-            self.emitter.emit(self.curToken.text)
-            self.nextToken()
-            self.match(TokenType.EQ)
-            self.emitter.emit(" = ")
-            self.expression()
-            self.emitter.emitLine(";")
 
         # This is not a valid statement. Error!
         else:
@@ -211,12 +220,15 @@ class Parser:
     
     # primary ::= number | ident
     def primary(self) -> None:
-        if self.checkToken(TokenType.NUMBER) or self.checkToken(TokenType.FLOAT): 
+
+        if self.checkToken(TokenType.INTEGER) or self.checkToken(TokenType.FLOAT): 
             self.emitter.emit(self.curToken.text)
             self.nextToken()
+
         elif self.checkToken(TokenType.IDENT):
             # Ensure the variable already exists.
-            if self.curToken.text not in self.symbols:
+            if self.curToken.text not in self.identInt and self.curToken.text not in self.identFloat:
+                print(self.identInt, self.identFloat)
                 self.abort("Referencing variable before assignment: " + self.curToken.text)
 
             self.emitter.emit(self.curToken.text)
@@ -250,9 +262,13 @@ class Parser:
     
     def intializeVariable(self, varType: str, varName: str) -> None:
         # check if ident exists in symbol table. if not declare it
-        if self.curToken.text not in self.symbols:
-            self.symbols.add(self.curToken.text)
+        if self.curToken.text not in self.identFloat or self.curToken.text not in self.identInt or self.curToken.text not in self.identStr:
             if varType == "string":
+                self.identStr.add(varName)
                 self.emitter.headerLine("char *" + varName + " = malloc(256);")
+            elif varType == "int":
+                self.identInt.add(varName)
+                self.emitter.headerLine(varType + " " + varName + ";")
             else:
+                self.identFloat.add(varName)
                 self.emitter.headerLine(varType + " " + varName + ";")

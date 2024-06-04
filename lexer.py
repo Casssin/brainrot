@@ -118,7 +118,7 @@ class Lexer:
             if isFloat:
                 token = Token(tokText, TokenType.FLOAT)
             else:
-                token = Token(tokText, TokenType.NUMBER)
+                token = Token(tokText, TokenType.INTEGER)
 
         elif self.curChar.isalpha():
             # Leading character is a letter, so must be an identifier or keyword
