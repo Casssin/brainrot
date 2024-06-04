@@ -67,6 +67,23 @@ class Parser:
                 # Simple string, so print it.
                 self.emitter.emitLine("printf(" + self.curToken.text[:-1] + "\\n\");")   # [:-1] to remove the quotation mark
                 self.nextToken()
+            
+            # If identifier, check which identifier it is
+            elif self.checkToken(TokenType.IDENT):
+                if self.curToken.text in self.identFloat:
+                    self.emitter.emit("printf(\"%" + ".2f\\n\", (float)(")
+                    self.expression()
+                    self.emitter.emitLine("));")
+                elif self.curToken.text in self.identInt:
+                    self.emitter.emit("printf(\"%" + "d\\n\", (int)(")
+                    self.expression()
+                    self.emitter.emitLine("));")
+                elif self.curToken.text in self.identStr:
+                    self.emitter.emitLine("printf(" + self.curToken.text)
+                else:
+                    self.abort("Need to intialize identifier before printing")
+
+            # Else it is an expression
             else:
                 self.emitter.emit("printf(\"%" + ".2f\\n\", (float)(")
                 self.expression()
@@ -147,6 +164,7 @@ class Parser:
                     self.intializeVariable("float", varName)
                 elif self.curToken.text in self.identInt:
                     self.intializeVariable("int", varName)
+                self.emitter.emit(varName + " = ")
                 self.expression()
            
             else:
@@ -154,22 +172,40 @@ class Parser:
 
             self.emitter.emitLine(";")
 
-        # "SKIBIDI" ident
+        # "SKIBIDI" ident; input must initialize variable to determine type
         elif self.checkToken(TokenType.SKIBIDI):
             self.nextToken()
 
-            # If variable doesn't already exist, declare it.
-            if self.curToken.text not in self.identFloat:
-                self.identFloat.add(self.curToken.text)
-                self.emitter.headerLine("float " + self.curToken.text + ";")
+            # ensures the variable is the correct type, 
+            if self.checkToken(TokenType.IDENT):
+                if self.curToken.text in self.identFloat:
+                    # Emit scanf but also validate the input. If invalid, set the variable to 0 and clear the input.
+                    self.emitter.emitLine("if(0 == scanf(\"%" + "f\", &" + self.curToken.text + ")) {")
+                    self.emitter.emitLine(self.curToken.text + " = 0;")
+                    self.emitter.emit("scanf(\"%")
+                    self.emitter.emitLine("*s\");")
+                    self.emitter.emitLine("}")
 
-            # Emit scanf but also validate the input. If invalid, set the variable to 0 and clear the input.
-            self.emitter.emitLine("if(0 == scanf(\"%" + "f\", &" + self.curToken.text + ")) {")
-            self.emitter.emitLine(self.curToken.text + " = 0;")
-            self.emitter.emit("scanf(\"%")
-            self.emitter.emitLine("*s\");")
-            self.emitter.emitLine("}")
-            self.match(TokenType.IDENT)
+                elif self.curToken.text in self.identInt:
+                    self.emitter.emitLine("if(0 == scanf(\"%" + "d\", &" + self.curToken.text + ")) {")
+                    self.emitter.emitLine(self.curToken.text + " = 0;")
+                    self.emitter.emit("scanf(\"%")
+                    self.emitter.emitLine("*s\");")
+                    self.emitter.emitLine("}")
+                
+                elif self.curToken.text in self.identStr:
+                    self.emitter.emitLine("if(0 == scanf(\"%" + "s\", " + self.curToken.text + ")) {")
+                    self.emitter.emitLine(self.curToken.text + " = 0;")
+                    self.emitter.emit("scanf(\"%")
+                    self.emitter.emitLine("*s\");")
+                    self.emitter.emitLine("}")
+                
+                else:
+                    self.abort("Expected an initalized variable for SKIBIDI")
+            else:
+                self.abort("Expected an initalized variable for SKIBIDI")
+            self.nextToken()
+
 
         # This is not a valid statement. Error!
         else:

@@ -12,7 +12,7 @@ class TokenType(enum.Enum):
 	#LABEL = 101
 	#GOTO = 102
 	# SKIBIDI = print
-	SKIBIDI = 103
+	SKIBIDI = 102
     # RIZZ = input
 	RIZZ = 104
 	#LET = 105
