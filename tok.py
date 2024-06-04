@@ -8,6 +8,9 @@ class TokenType(enum.Enum):
 	FLOAT  = 2
 	STRING = 3
 	IDENT = 4
+	ARRSTART = 5
+	ARREND = 6
+	ARRCOMMA = 7
 	# Keywords.
 	#LABEL = 101
 	#GOTO = 102

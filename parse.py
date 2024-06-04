@@ -9,10 +9,12 @@ class Parser:
         self.lexer = lexer
         self.emitter = emitter
 
-        self.identInt = set()   # All int variables seen so far
-        self.identFloat = set() # All float variables seen so far
-        self.identStr = set()   # All string variables seen so far
-        self.identBool = set()  # All boolean variables seen so far
+
+        self.ident = {"int" : set(),
+                      "float" : set(),
+                      "str" : set(),
+                      "bool" : set(),
+                      "int[]": set()}  # stores all variables seen so far in their respective types
 
         self.curToken = None
         self.peekToken = None
@@ -72,16 +74,25 @@ class Parser:
             
             # If identifier, check which identifier it is
             elif self.checkToken(TokenType.IDENT):
-                if self.curToken.text in self.identFloat:
+
+                if self.curToken.text in self.ident["float"]:
                     self.emitter.emit("printf(\"%" + ".2f\\n\", (float)(")
                     self.expression()
                     self.emitter.emitLine("));")
-                elif self.curToken.text in self.identInt:
+
+                elif self.curToken.text in self.ident["int"]:
                     self.emitter.emit("printf(\"%" + "d\\n\", (int)(")
                     self.expression()
                     self.emitter.emitLine("));")
-                elif self.curToken.text in self.identStr:
+
+                elif self.curToken.text in self.ident["str"]:
                     self.emitter.emitLine("printf(" + self.curToken.text)
+
+                elif self.curToken.text in self.ident["bool"]:
+                    self.emitter.emit("printf(\"%" + "d\\n\", (bool)(")
+                    self.comparison()
+                    self.emitter.emitLine("));")
+
                 else:
                     self.abort("Need to intialize identifier before printing")
 
@@ -140,42 +151,54 @@ class Parser:
             self.match(TokenType.GOD)
             varName = self.curToken.text
             self.match(TokenType.IDENT)
-            self.match(TokenType.IS)
 
 
-            # Find and determine what type the variable is and intialize the variable if not initalized
-            if self.checkToken(TokenType.INTEGER):
-                self.intializeVariable("int", varName)
-                self.emitter.emit(varName + " = ")
-                self.expression()
-            
-            elif self.checkToken(TokenType.FLOAT):
-                self.intializeVariable("float", varName)
-                self.emitter.emit(varName + " = ")
-                self.expression()
-
-            # Strings have a character limit of 256
-            elif self.checkToken(TokenType.STRING):
-                self.intializeVariable("string", varName)
-                self.emitter.emit("strcpy(" + varName + ", " + self.curToken.text + ")")
-                self.emitter.enderLine("free(" + varName +");")
+            if self.checkToken(TokenType.IS):
                 self.nextToken()
+                # Find and determine what type the variable is and intialize the variable if not initalized
+                if self.checkToken(TokenType.INTEGER):
+                    self.intializeVariable("int", varName, 0)
+                    self.emitter.emit(varName + " = ")
+                    self.expression()
+                
+                elif self.checkToken(TokenType.FLOAT):
+                    self.intializeVariable("float", varName, 0)
+                    self.emitter.emit(varName + " = ")
+                    self.expression()
 
-            elif self.checkToken(TokenType.BASED) or self.checkToken(TokenType.CRINGE):
-                self.intializeVariable("bool", varName)
-                self.emitter.emit(varName + "=")
-                self.expression()
+                # Strings have a character limit of 256
+                elif self.checkToken(TokenType.STRING):
+                    self.intializeVariable("str", varName, 0)
+                    self.emitter.emit("strcpy(" + varName + ", " + self.curToken.text + ")")
+                    self.emitter.enderLine("free(" + varName +");")
+                    self.nextToken()
 
-            elif self.checkToken(TokenType.IDENT):
-                if self.curToken.text in self.identFloat:
-                    self.intializeVariable("float", varName)
-                elif self.curToken.text in self.identInt:
-                    self.intializeVariable("int", varName)
-                self.emitter.emit(varName + " = ")
-                self.expression()
-                       
+                elif self.checkToken(TokenType.BASED) or self.checkToken(TokenType.CRINGE):
+                    self.intializeVariable("bool", varName)
+                    self.emitter.emit(varName + "=")
+                    self.expression()
+
+                elif self.checkToken(TokenType.IDENT):
+                    if self.curToken.text in self.ident["float"]:
+                        self.intializeVariable("float", varName)
+                    elif self.curToken.text in self.ident["int"]:
+                        self.intializeVariable("int", varName)
+                    self.emitter.emit(varName + " = ")
+                    self.expression()
+                        
+                else:
+                    self.abort("Could not recognize variable type")
+
+            elif self.checkToken(TokenType.ARRSTART):
+                self.nextToken()
+                arrSize = self.curToken.text
+                self.match(TokenType.INTEGER)
+                self.match(TokenType.ARREND)
+
+                self.intializeVariable("int[]", varName, arrSize)
+            
             else:
-                self.abort("Could not recognize variable type")
+                self.abort("Invalid format for ON GOD")
 
             self.emitter.emitLine(";")
 
@@ -185,7 +208,7 @@ class Parser:
 
             # ensures the variable is the correct type, 
             if self.checkToken(TokenType.IDENT):
-                if self.curToken.text in self.identFloat:
+                if self.curToken.text in self.ident["float"]:
                     # Emit scanf but also validate the input. If invalid, set the variable to 0 and clear the input.
                     self.emitter.emitLine("if(0 == scanf(\"%" + "f\", &" + self.curToken.text + ")) {")
                     self.emitter.emitLine(self.curToken.text + " = 0;")
@@ -193,15 +216,22 @@ class Parser:
                     self.emitter.emitLine("*s\");")
                     self.emitter.emitLine("}")
 
-                elif self.curToken.text in self.identInt:
+                elif self.curToken.text in self.ident["int"]:
                     self.emitter.emitLine("if(0 == scanf(\"%" + "d\", &" + self.curToken.text + ")) {")
                     self.emitter.emitLine(self.curToken.text + " = 0;")
                     self.emitter.emit("scanf(\"%")
                     self.emitter.emitLine("*s\");")
                     self.emitter.emitLine("}")
                 
-                elif self.curToken.text in self.identStr:
+                elif self.curToken.text in self.ident["str"]:
                     self.emitter.emitLine("if(0 == scanf(\"%" + "s\", " + self.curToken.text + ")) {")
+                    self.emitter.emitLine(self.curToken.text + " = 0;")
+                    self.emitter.emit("scanf(\"%")
+                    self.emitter.emitLine("*s\");")
+                    self.emitter.emitLine("}")
+
+                elif self.curToken.text in self.ident["bool"]:
+                    self.emitter.emitLine("if(0 == scanf(\"%" + "d\", &" + self.curToken.text + ")) {")
                     self.emitter.emitLine(self.curToken.text + " = 0;")
                     self.emitter.emit("scanf(\"%")
                     self.emitter.emitLine("*s\");")
@@ -270,8 +300,8 @@ class Parser:
 
         elif self.checkToken(TokenType.IDENT):
             # Ensure the variable already exists.
-            if self.curToken.text not in self.identInt and self.curToken.text not in self.identFloat:
-                print(self.identInt, self.identFloat)
+            if self.curToken.text not in self.ident["int"] and self.curToken.text not in self.ident["float"] and self.curToken.text not in self.ident["bool"]:
+                print(self.ident["int"], self.ident["float"])
                 self.abort("Referencing variable before assignment: " + self.curToken.text)
 
             self.emitter.emit(self.curToken.text)
@@ -309,21 +339,41 @@ class Parser:
             self.nextToken()
             self.expression()
     
+    
     def isComparisonOperator(self) -> bool:
         return self.checkToken(TokenType.GT) or self.checkToken(TokenType.GTEQ) or self.checkToken(TokenType.LT) or self.checkToken(TokenType.LTEQ) or self.checkToken(TokenType.EQEQ) or self.checkToken(TokenType.NOTEQ)
     
-    def intializeVariable(self, varType: str, varName: str) -> None:
+    def intializeVariable(self, varType: str, varName: str, arrSize: str) -> None:
         # check if ident exists in symbol table. if not declare it
-        if self.curToken.text not in self.identFloat or self.curToken.text not in self.identInt or self.curToken.text not in self.identStr or self.curToken.text not in self.identBool:
-            if varType == "string":
-                self.identStr.add(varName)
+        if self.curToken.text not in self.ident[varType]:
+            if varType == "str":
+                self.ident["str"].add(varName)
                 self.emitter.headerLine("char *" + varName + " = malloc(256);")
-            elif varType == "float":
-                self.identFloat.add(varName)
-                self.emitter.headerLine(varType + " " + varName + ";")
-            elif varType == "int":
-                self.identInt.add(varName)
-                self.emitter.headerLine(varType + " " + varName + ";")
+            elif varType == "int[]":
+                self.ident["int[]"].add(varName)
+                self.emitter.emit("int " + varName + "[" + arrSize + "] = ")
+
+                # For intialization of array
+                self.nextToken()
+                self.emitter.emit("{")
+                self.match(TokenType.ARRSTART)
+
+                i = 0
+                while self.checkToken(TokenType.INTEGER):
+                    i += 1
+                    self.emitter.emit(self.curToken.text)
+                    self.nextToken()
+                    if self.checkToken(TokenType.ARREND):
+                        break
+                    self.emitter.emit(", ")
+                    self.nextToken()
+
+                if i > int(arrSize):
+                    self.abort("Intialized variables are greater than the given array size.")
+                
+                self.match(TokenType.ARREND)
+                self.emitter.emit("}")
+
             else:
-                self.identBool.add(varName)
+                self.ident[varType].add(varName)
                 self.emitter.headerLine(varType + " " + varName + ";")

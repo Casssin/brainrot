@@ -57,6 +57,15 @@ class Lexer:
         elif self.curChar == '/':
             token = Token(self.curChar, TokenType.SLASH)
 
+        elif self.curChar == '[':
+            token = Token(self.curChar, TokenType.ARRSTART)
+
+        elif self.curChar == ']': 
+            token = Token(self.curChar, TokenType.ARREND)
+        
+        elif self.curChar == ',':
+            token = Token(self.curChar, TokenType.ARRCOMMA)
+
         elif self.curChar == '\n':
             token = Token(self.curChar, TokenType.NEWLINE)
 
@@ -69,7 +78,7 @@ class Lexer:
                 self.nextChar()
                 token = Token(lastChar + self.curChar, TokenType.EQEQ)
             else:
-                self.abort("Single = does not exist. Use MOGGED.")
+                self.abort("Single = does not exist. Use IS.")
 
         elif self.curChar == '>':
             # Check whether this is token is > or >=
@@ -154,5 +163,3 @@ class Lexer:
 			
         self.nextChar()
         return token
-
-
