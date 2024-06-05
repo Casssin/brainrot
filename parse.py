@@ -179,10 +179,16 @@ class Parser:
                     self.expression()
 
                 elif self.checkToken(TokenType.IDENT):
+                    
                     if self.curToken.text in self.ident["float"]:
-                        self.intializeVariable("float", varName)
+                        self.intializeVariable("float", varName, 0)
+                    
                     elif self.curToken.text in self.ident["int"]:
-                        self.intializeVariable("int", varName)
+                        self.intializeVariable("int", varName, 0)
+                    
+                    else:
+                        self.abort("Expected initalized variable after IS.")
+
                     self.emitter.emit(varName + " = ")
                     self.expression()
                         
@@ -345,7 +351,7 @@ class Parser:
     
     def intializeVariable(self, varType: str, varName: str, arrSize: str) -> None:
         # check if ident exists in symbol table. if not declare it
-        if self.curToken.text not in self.ident[varType]:
+        if varName not in self.ident[varType]:
             if varType == "str":
                 self.ident["str"].add(varName)
                 self.emitter.headerLine("char *" + varName + " = malloc(256);")
@@ -374,6 +380,8 @@ class Parser:
                 self.match(TokenType.ARREND)
                 self.emitter.emit("}")
 
+            # Case for int, bool and float
             else:
                 self.ident[varType].add(varName)
+                print(self.ident[varType])
                 self.emitter.headerLine(varType + " " + varName + ";")
