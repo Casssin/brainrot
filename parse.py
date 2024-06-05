@@ -145,10 +145,10 @@ class Parser:
             self.emitter.emitLine("}")
         
 
-        # "ON GOD" ident "IS" expression
+        # "ON GYATT" ident "IS" expression
         elif self.checkToken(TokenType.ON):
             self.nextToken()
-            self.match(TokenType.GOD)
+            self.match(TokenType.GYATT)
             varName = self.curToken.text
             self.match(TokenType.IDENT)
 
@@ -204,7 +204,7 @@ class Parser:
                 self.intializeVariable("int[]", varName, arrSize)
             
             else:
-                self.abort("Invalid format for ON GOD")
+                self.abort("Invalid format for ON GYATT")
 
             self.emitter.emitLine(";")
 

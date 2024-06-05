@@ -1,15 +1,15 @@
 # Program that asks for how many fibonacci numbers to be printed and prints that amount of fibonacci numbers
-ON GOD nums IS 0
+ON GYATT nums IS 0
 
 RIZZ "How many fibonacci numbers do you want?"
 SKIBIDI nums
 
-ON GOD a IS 0
-ON GOD b IS 1
+ON GYATT a IS 0
+ON GYATT b IS 1
 
 ONLY IN OHIO nums > 0 
     RIZZ a
-    ON GOD c IS a + b
+    ON GYATT c IS a + b
     a IS b
     b IS c
     nums IS nums - 1

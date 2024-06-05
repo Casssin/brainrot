@@ -31,7 +31,7 @@ class TokenType(enum.Enum):
 	CRINGE = 113
 	# allow it = LET, aka assigning IDENT
 	ON = 114
-	GOD = 115
+	GYATT = 115
 	# only in ohio = while
 	ONLY = 116
 	IN = 117
